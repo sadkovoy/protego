@@ -1,0 +1,5 @@
+services:
+  - name: Example
+    host: example.com
+    rate_per_second: 15
+    burst: 25

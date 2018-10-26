@@ -6,11 +6,12 @@ extern crate futures;
 
 mod handlers;
 mod state;
+mod request;
 
 use actix_web::{App, middleware, server};
 
 use handlers::{proxy};
-use state::{AppState, create_state};
+use state::{AppState, prepare_state};
 
 
 fn main() {
@@ -18,7 +19,7 @@ fn main() {
     env_logger::init();
     let sys = actix::System::new("protego");
 
-    let entries = create_state();
+    let entries = prepare_state();
 
     server::new(move || {
         App::with_state(AppState{entries: entries.clone()})
@@ -28,6 +29,6 @@ fn main() {
         .unwrap()
         .start();
 
-    println!("Started http server: 0.0.0.0:8000");
+    println!("Started proxy server: 0.0.0.0:8000");
     let _ = sys.run();
 }
