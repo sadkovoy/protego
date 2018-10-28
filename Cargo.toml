@@ -1,16 +1,16 @@
 [package]
 name = "protego"
 version = "0.1.0"
-authors = ["dmytrosa <dmytrosa@wix.com>"]
+authors = ["sadkovoy <dmitriy.sadkovoy@gmail.com>"]
 
 [dependencies]
-env_logger = "0.5"
-
 actix = "0.7"
 actix-web = { version="0.7", features=["ssl"] }
 actix-redis = "0.5.1"
 
 chrono = "0.4.6"
+
+env_logger = "0.5"
 
 futures = "0.1.25"
 

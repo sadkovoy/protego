@@ -1,9 +1,9 @@
 extern crate actix;
+extern crate actix_redis;
 extern crate actix_web;
 extern crate chrono;
 extern crate env_logger;
 extern crate futures;
-extern crate actix_redis;
 #[macro_use] extern crate redis_async;
 
 
@@ -13,8 +13,8 @@ mod request;
 
 use std::sync::Arc;
 
-use actix_web::{App, middleware, server};
 use actix_redis::RedisActor;
+use actix_web::{App, middleware, server};
 
 
 use handlers::{proxy};

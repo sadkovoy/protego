@@ -2,16 +2,16 @@ extern crate actix;
 extern crate actix_web;
 extern crate env_logger;
 
-use actix_web::{HttpRequest, HttpMessage, HttpResponse, Error, AsyncResponder, http::StatusCode};
+use std::sync::Arc;
+
+use actix::Addr;
+use actix_redis::{Command, RedisActor};
+use actix_web::{AsyncResponder, HttpRequest, HttpMessage, HttpResponse, http::StatusCode, Error};
 use futures::{Future, future::ok as future_ok, future::err as future_error, future::lazy};
+use redis_async::resp::FromResp;
 
 use state::AppState;
-use request::{request_method_builder, update_request_headers};
-use actix_redis::{Command};
-use redis_async::resp::{FromResp};
-use actix_redis::RedisActor;
-use std::sync::Arc;
-use actix::Addr;
+use request::{request_method_builder, set_request_headers, set_request_uri};
 
 
 fn check_if_allowed(redis: Arc<Addr<RedisActor>>, remote_addr: String) -> impl Future<Item=(), Error=()> {
@@ -34,7 +34,6 @@ pub fn proxy(req: HttpRequest<AppState>) -> impl Future<Item=HttpResponse, Error
 
     check_if_allowed(redis, remote_addr).then(
         move |allowed| {
-
             if allowed.is_err() {
                 return lazy(move || {
                     Ok(HttpResponse::new(StatusCode::TOO_MANY_REQUESTS))
@@ -46,10 +45,11 @@ pub fn proxy(req: HttpRequest<AppState>) -> impl Future<Item=HttpResponse, Error
             let method = req.method();
             let headers = req.headers();
             let body = req.body();
-            let host = "httpbin.org";
+            let host = "wix.com";
 
-            let mut request = request_method_builder(method.to_owned(), format!("https://{}{}", host, uri));
-            update_request_headers(&mut request, headers, host);
+            let mut request = request_method_builder(method.to_owned());
+            set_request_uri(&mut request, format!("https://{}{}", host, uri));
+            set_request_headers(&mut request, headers, host);
 
             body
                 .map_err(Error::from)
@@ -74,7 +74,7 @@ pub fn proxy(req: HttpRequest<AppState>) -> impl Future<Item=HttpResponse, Error
                                     })
                             }
                         ).responder()
-            }).responder()
+                }).responder()
         }
     )
 }
