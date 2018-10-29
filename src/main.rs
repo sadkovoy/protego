@@ -29,7 +29,7 @@ fn main() {
     let entries = prepare_entries();  // for in-memory limiter storage
 
     server::new(move || {
-        let redis = Arc::new(RedisActor::start("redis:6379"));
+        let redis = Arc::new(RedisActor::start("127.0.0.1:6379"));
         App::with_state(AppState{entries: entries.clone(), redis})
             .middleware(middleware::Logger::default())
             .default_resource(|r| r.with_async(proxy))

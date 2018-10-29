@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use actix::Addr;
 use actix_redis::{Command, RedisActor};
-use actix_web::{AsyncResponder, HttpRequest, HttpMessage, HttpResponse, http::StatusCode, Error};
-use futures::{Future, future::ok as future_ok, future::err as future_error, future::lazy};
+use actix_web::{AsyncResponder, Body, HttpRequest, HttpMessage, HttpResponse, http::StatusCode, Error};
+use futures::{Future, future::ok as future_ok, future::err as future_error, future::lazy, Stream};
 use redis_async::resp::FromResp;
 
 use state::AppState;
@@ -44,37 +44,33 @@ pub fn proxy(req: HttpRequest<AppState>) -> impl Future<Item=HttpResponse, Error
             let uri = req.uri();
             let method = req.method();
             let headers = req.headers();
-            let body = req.body();
+            let body = req.payload();
             let host = "wix.com";
 
             let mut request = request_method_builder(method.to_owned());
             set_request_uri(&mut request, format!("https://{}{}", host, uri));
             set_request_headers(&mut request, headers, host);
 
-            body
+            request
+                .body(Body::Streaming(Box::new(body.map_err(|e| e.into()))))
+                .unwrap()
+                .send()
                 .map_err(Error::from)
-                .and_then(move |body| {
-                    request
-                        .body(body)
-                        .unwrap()
-                        .send()
-                        .map_err(Error::from)
-                        .and_then(
-                            |resp| {
-                                resp
-                                    .body()
-                                    .limit(10_485_760)  // 10 Mb
-                                    .from_err()
-                                    .and_then(move |body| {
-                                        let mut response = HttpResponse::Ok();
-                                        for (header_name, header_value) in resp.headers() {
-                                            response.header(header_name, header_value.to_str().unwrap());
-                                        }
-                                        Ok(response.body(body))
-                                    })
-                            }
-                        ).responder()
-                }).responder()
+                .and_then(
+                    |resp| {
+                        resp
+                            .body()
+                            .limit(10_485_760)  // 10 Mb
+                            .from_err()
+                            .and_then(move |body| {
+                                let mut response = HttpResponse::Ok();
+                                for (header_name, header_value) in resp.headers() {
+                                    response.header(header_name, header_value.to_str().unwrap());
+                                }
+                                Ok(response.body(body))
+                            })
+                    }
+                ).responder()
         }
     )
 }
