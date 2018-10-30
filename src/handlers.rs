@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use actix::Addr;
 use actix_redis::{Command, RedisActor};
-use actix_web::{AsyncResponder, Body, HttpRequest, HttpMessage, HttpResponse, http::StatusCode, Error};
-use futures::{Future, future::ok as future_ok, future::err as future_error, future::lazy, Stream};
+use actix_web::{AsyncResponder, HttpRequest, HttpMessage, HttpResponse, http::StatusCode, Error};
+use futures::{Future, future::ok as future_ok, future::err as future_error, future::lazy};
 use redis_async::resp::FromResp;
 
 use state::AppState;
@@ -45,14 +45,14 @@ pub fn proxy(req: HttpRequest<AppState>) -> impl Future<Item=HttpResponse, Error
             let method = req.method();
             let headers = req.headers();
             let body = req.payload();
-            let host = "wix.com";
+            let host = "www.wix.com";
 
             let mut request = request_method_builder(method.to_owned());
             set_request_uri(&mut request, format!("https://{}{}", host, uri));
             set_request_headers(&mut request, headers, host);
 
             request
-                .body(Body::Streaming(Box::new(body.map_err(|e| e.into()))))
+                .streaming(body)
                 .unwrap()
                 .send()
                 .map_err(Error::from)
